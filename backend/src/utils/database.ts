@@ -66,3 +66,23 @@ function runMigrations(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_inspections_property ON inspections(property_id);
   `)
 }
+
+// ─── snake_case → camelCase helpers ──────────────────────────────────────────
+function snakeToCamel(s: string): string {
+  return s.replace(/_([a-z])/g, (_, c) => c.toUpperCase())
+}
+
+/** Convert a single row's keys from snake_case to camelCase */
+export function toCamel<T = Record<string, unknown>>(row: any): T {
+  if (!row) return row
+  const out: any = {}
+  for (const key of Object.keys(row)) {
+    out[snakeToCamel(key)] = row[key]
+  }
+  return out as T
+}
+
+/** Convert an array of rows from snake_case to camelCase */
+export function toCamelArray<T = Record<string, unknown>>(rows: any[]): T[] {
+  return rows.map((r) => toCamel<T>(r))
+}

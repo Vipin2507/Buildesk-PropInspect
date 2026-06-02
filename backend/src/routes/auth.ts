@@ -1,7 +1,7 @@
 import { Router, Response } from 'express'
 import { hash, compare } from 'bcryptjs'
 import { v4 as uuid } from 'uuid'
-import { getDB } from '../utils/database'
+import { getDB, toCamel } from '../utils/database'
 import { generateToken, AuthRequest, authMiddleware } from '../middleware/auth'
 import { z } from 'zod'
 
@@ -71,7 +71,7 @@ router.post('/register', async (req, res: Response) => {
 router.get('/me', authMiddleware, (req: AuthRequest, res: Response) => {
   const db = getDB()
   const user = db.prepare('SELECT id, name, email, created_at FROM users WHERE id = ?').get(req.userId) as any
-  res.json(user)
+  res.json(toCamel(user))
 })
 
 export default router

@@ -1,6 +1,6 @@
 import { Router, Response } from 'express'
 import { v4 as uuid } from 'uuid'
-import { getDB } from '../utils/database'
+import { getDB, toCamel, toCamelArray } from '../utils/database'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
 
 const router = Router()
@@ -10,8 +10,10 @@ router.get('/:unitId', authMiddleware, (req: AuthRequest, res: Response) => {
   const ins = db.prepare('SELECT * FROM inspections WHERE unit_id = ?').get(req.params.unitId) as any
   if (ins) {
     ins.items = JSON.parse(ins.items)
+    res.json(toCamel(ins))
+  } else {
+    res.json(null)
   }
-  res.json(ins)
 })
 
 router.post('/', authMiddleware, (req: AuthRequest, res: Response) => {
@@ -41,7 +43,7 @@ router.get('/', authMiddleware, (req: AuthRequest, res: Response) => {
   const { propertyId } = req.query
   const inspections = db.prepare('SELECT * FROM inspections WHERE property_id = ?').all(propertyId) as any[]
   inspections.forEach(i => { i.items = JSON.parse(i.items) })
-  res.json(inspections)
+  res.json(toCamelArray(inspections))
 })
 
 export default router

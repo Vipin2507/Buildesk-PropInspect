@@ -1,6 +1,6 @@
 import { Router, Response } from 'express'
 import { v4 as uuid } from 'uuid'
-import { getDB } from '../utils/database'
+import { getDB, toCamelArray } from '../utils/database'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
 import { broadcast, registerClient } from '../utils/sse'
 import jwt from 'jsonwebtoken'
@@ -90,14 +90,19 @@ router.get('/pull', authMiddleware, (req: AuthRequest, res: Response) => {
 
   inspections.forEach(i => { i.items = JSON.parse(i.items) })
 
-  // Fetch units for the returned properties
+  // Fetch units for the returned properties using parameterized query
   let units: any[] = []
   if (properties.length) {
-    const ids = properties.map((p: any) => `'${p.id}'`).join(',')
-    units = db.prepare(`SELECT * FROM units WHERE property_id IN (${ids})`).all()
+    const placeholders = properties.map(() => '?').join(',')
+    const ids = properties.map((p: any) => p.id)
+    units = db.prepare(`SELECT * FROM units WHERE property_id IN (${placeholders})`).all(...ids)
   }
 
-  res.json({ properties, inspections, units })
+  res.json({
+    properties: toCamelArray(properties),
+    inspections: toCamelArray(inspections),
+    units: toCamelArray(units),
+  })
 })
 
 // Server-Sent Events stream for real-time updates

@@ -1,5 +1,5 @@
 import { Router, Response } from 'express'
-import { getDB } from '../utils/database'
+import { getDB, toCamelArray } from '../utils/database'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
 import { z } from 'zod'
 import { broadcast } from '../utils/sse'
@@ -19,7 +19,7 @@ router.get('/', authMiddleware, (req: AuthRequest, res: Response) => {
   if (!req.userId) return res.status(401).json({ message: 'Unauthorized' })
   const db = getDB()
   const props = db.prepare('SELECT * FROM properties WHERE owner_id = ? ORDER BY created_at DESC').all(req.userId)
-  res.json(props)
+  res.json(toCamelArray(props))
 })
 
 router.post('/', authMiddleware, (req: AuthRequest, res: Response) => {

@@ -60,8 +60,12 @@ export const useAuthStore = create<AuthStore>()(
         try {
           const res = await authAPI.me()
           set({ user: res.data })
-        } catch {
-          set({ user: null, token: null })
+        } catch (err: any) {
+          // Only clear auth state on 401 (invalid/expired token)
+          // Network errors, rate limiting (429), etc. should NOT log user out
+          if (err?.response?.status === 401) {
+            set({ user: null, token: null })
+          }
         }
       },
     }),

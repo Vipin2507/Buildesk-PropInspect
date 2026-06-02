@@ -1,8 +1,11 @@
+import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 import path from 'path'
+import { hash } from 'bcryptjs'
+import { getDB } from './utils/database'
 import authRoutes from './routes/auth'
 import propertiesRoutes from './routes/properties'
 import unitsRoutes from './routes/units'
@@ -18,7 +21,7 @@ app.use(helmet({
 }))
 app.use(cors())
 app.use(express.json())
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }))
+app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 1000 }))
 
 // Routes
 app.use('/api/auth', authRoutes)
@@ -54,6 +57,25 @@ app.get('/debug', (req, res) => {
   })
 })
 
-app.listen(port, () => {
-  console.log(`🚀 Backend running at http://localhost:${port}`)
+// Auto-seed demo user on startup (survives Render ephemeral disk wipes)
+async function seedDemoUser() {
+  try {
+    const db = getDB()
+    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get('demo@propinspect.in')
+    if (!existing) {
+      const hashedPwd = await hash('demo1234', 10)
+      const now = new Date().toISOString()
+      db.prepare('INSERT INTO users (id, name, email, password, created_at) VALUES (?, ?, ?, ?, ?)')
+        .run('demo-user-001', 'Demo User', 'demo@propinspect.in', hashedPwd, now)
+      console.log('✓ Demo user seeded (demo@propinspect.in / demo1234)')
+    }
+  } catch (err) {
+    console.error('⚠ Failed to seed demo user:', err)
+  }
+}
+
+seedDemoUser().then(() => {
+  app.listen(port, () => {
+    console.log(`🚀 Backend running at http://localhost:${port}`)
+  })
 })
