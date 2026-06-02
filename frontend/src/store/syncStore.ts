@@ -127,9 +127,22 @@ export const useSyncStore = create<SyncStore>((set, get) => ({
     const res = await syncAPI.pull(since)
     const { properties, units, inspections } = res.data
 
-    for (const p of properties ?? []) await saveProperty(p)
+    // Get IDs of items that have pending local changes
+    const pending = await getPending()
+    const pendingInspectionIds = new Set(pending.filter(p => p.type === 'upsert_inspection').map(p => (p.payload as any).id))
+    const pendingPropertyIds = new Set(pending.filter(p => p.type === 'create_property').map(p => (p.payload as any).property?.id))
+
+    // Only overwrite local data if we don't have pending local changes for it
+    for (const p of properties ?? []) {
+      if (!pendingPropertyIds.has(p.id)) await saveProperty(p)
+    }
+    
+    // Units don't have a separate pending change type (they are part of create_property)
     if ((units ?? []).length) await saveUnits(units)
-    for (const ins of inspections ?? []) await saveInspection(ins)
+    
+    for (const ins of inspections ?? []) {
+      if (!pendingInspectionIds.has(ins.id)) await saveInspection(ins)
+    }
 
     localStorage.setItem('pi_last_pull', String(Date.now()))
   },
