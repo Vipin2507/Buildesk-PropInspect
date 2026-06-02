@@ -11,6 +11,7 @@ const router = Router()
 
 router.post('/push', authMiddleware, (req: AuthRequest, res: Response) => {
   try {
+    if (!req.userId) return res.status(401).json({ message: 'Unauthorized' })
     const { changes } = req.body
     const db = getDB()
 
@@ -75,6 +76,7 @@ router.post('/push', authMiddleware, (req: AuthRequest, res: Response) => {
 })
 
 router.get('/pull', authMiddleware, (req: AuthRequest, res: Response) => {
+  if (!req.userId) return res.status(401).json({ message: 'Unauthorized' })
   const db = getDB()
   const { since } = req.query
   const timestamp = since ? new Date(Number(since)).toISOString() : '1970-01-01'

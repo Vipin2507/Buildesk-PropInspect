@@ -16,6 +16,7 @@ const createPropertySchema = z.object({
 })
 
 router.get('/', authMiddleware, (req: AuthRequest, res: Response) => {
+  if (!req.userId) return res.status(401).json({ message: 'Unauthorized' })
   const db = getDB()
   const props = db.prepare('SELECT * FROM properties WHERE owner_id = ? ORDER BY created_at DESC').all(req.userId)
   res.json(props)
@@ -23,6 +24,7 @@ router.get('/', authMiddleware, (req: AuthRequest, res: Response) => {
 
 router.post('/', authMiddleware, (req: AuthRequest, res: Response) => {
   try {
+    if (!req.userId) return res.status(401).json({ message: 'Unauthorized' })
     const data = createPropertySchema.parse(req.body)
     const db = getDB()
     const { v4: uuid } = require('uuid')
@@ -55,6 +57,7 @@ router.post('/', authMiddleware, (req: AuthRequest, res: Response) => {
 })
 
 router.delete('/:id', authMiddleware, (req: AuthRequest, res: Response) => {
+  if (!req.userId) return res.status(401).json({ message: 'Unauthorized' })
   const db = getDB()
   db.prepare('DELETE FROM properties WHERE id = ? AND owner_id = ?').run(req.params.id, req.userId)
   broadcast(req.userId, 'property_deleted', { id: req.params.id })
