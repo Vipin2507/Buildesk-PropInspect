@@ -13,7 +13,7 @@ export default function AuthPage() {
   const navigate = useNavigate()
 
   // Login form
-  const [loginForm, setLoginForm] = useState({ email: 'demo@propinspect.in', password: 'demo1234' })
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' })
   // Register form
   const [regForm, setRegForm] = useState({ name: '', email: '', password: '' })
   const [regErrors, setRegErrors] = useState<Record<string, string>>({})
@@ -100,7 +100,6 @@ export default function AuthPage() {
               <Button type="submit" size="lg" loading={loading} className="w-full mt-6 bg-[#2563EB] hover:bg-[#1D4ED8]">
                 Sign in →
               </Button>
-              <p className="text-center text-xs text-slate-400 mt-2">Demo: demo@propinspect.in / demo1234</p>
             </form>
           ) : (
             <form onSubmit={handleRegister} className="space-y-4">

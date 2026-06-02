@@ -2,6 +2,7 @@ import { Router, Response } from 'express'
 import { getDB } from '../utils/database'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
 import { z } from 'zod'
+import { broadcast } from '../utils/sse'
 
 const router = Router()
 
@@ -46,6 +47,8 @@ router.post('/', authMiddleware, (req: AuthRequest, res: Response) => {
     }
 
     res.status(201).json({ id, name: data.name, location: data.location, floors: data.floors, unitsPerFloor: data.unitsPerFloor, unitPrefix: data.unitPrefix, startNumber: data.startNumber, ownerId: req.userId, createdAt: now, updatedAt: now })
+    // notify clients for this user
+    broadcast(req.userId, 'property_upsert', { property: { id, name: data.name, location: data.location, floors: data.floors, unitsPerFloor: data.unitsPerFloor, unitPrefix: data.unitPrefix, startNumber: data.startNumber, ownerId: req.userId, createdAt: now, updatedAt: now } })
   } catch (err: any) {
     res.status(400).json({ message: err.message })
   }
@@ -54,6 +57,7 @@ router.post('/', authMiddleware, (req: AuthRequest, res: Response) => {
 router.delete('/:id', authMiddleware, (req: AuthRequest, res: Response) => {
   const db = getDB()
   db.prepare('DELETE FROM properties WHERE id = ? AND owner_id = ?').run(req.params.id, req.userId)
+  broadcast(req.userId, 'property_deleted', { id: req.params.id })
   res.json({ success: true })
 })
 

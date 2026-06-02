@@ -2,3 +2,7 @@ node_modules/
 .env
 dist/
 build/
+
+# Local SQLite DB (do not commit)
+/backend/data/
+/backend/data/*.db

@@ -8,6 +8,7 @@ import {
   saveProperty,
   saveUnits,
   saveInspection,
+  deletePropertyLocal,
 } from '@/utils/db'
 import { syncAPI, propertiesAPI, inspectionsAPI } from '@/utils/api'
 
@@ -24,6 +25,42 @@ interface SyncStore {
   pullFromServer:    () => Promise<void>
 }
 
+// Server-Sent Events (EventSource) for real-time updates
+let _es: EventSource | null = null
+function initEventSource() {
+  const token = localStorage.getItem('pi_token')
+  if (!token || typeof window === 'undefined') return
+  try { _es?.close() } catch {}
+  const url = `/api/sync/stream?token=${encodeURIComponent(token)}`
+  _es = new EventSource(url)
+
+  _es.addEventListener('property_upsert', async (ev: MessageEvent) => {
+    const d = JSON.parse(ev.data)
+    if (d.property) await saveProperty(d.property)
+    if (d.units && d.units.length) await saveUnits(d.units)
+  })
+
+  _es.addEventListener('property_deleted', async (ev: MessageEvent) => {
+    const d = JSON.parse(ev.data)
+    if (d.id) await deletePropertyLocal(d.id)
+  })
+
+  _es.addEventListener('inspection_created', async (ev: MessageEvent) => {
+    const d = JSON.parse(ev.data)
+    await saveInspection({ id: d.id, unitId: d.unitId, propertyId: d.propertyId, items: d.items, inspectorName: d.inspectorName, lastUpdated: d.lastUpdated })
+  })
+
+  _es.addEventListener('inspection_updated', async (ev: MessageEvent) => {
+    const d = JSON.parse(ev.data)
+    await saveInspection({ id: `ins_${d.unitId}`, unitId: d.unitId, propertyId: d.propertyId, items: d.items, inspectorName: d.inspectorName, lastUpdated: d.lastUpdated })
+  })
+
+  _es.onerror = () => {
+    try { _es?.close() } catch {}
+    _es = null
+  }
+}
+
 export const useSyncStore = create<SyncStore>((set, get) => ({
   isOnline:     navigator.onLine,
   status:       'idle',
@@ -32,7 +69,13 @@ export const useSyncStore = create<SyncStore>((set, get) => ({
 
   setOnline: (v) => {
     set({ isOnline: v })
-    if (v) get().sync()
+    if (v) {
+      initEventSource()
+      get().sync()
+    } else {
+      try { _es?.close() } catch {}
+      _es = null
+    }
   },
 
   refreshPendingCount: async () => {
