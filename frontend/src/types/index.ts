@@ -53,6 +53,7 @@ export interface CheckItem {
   index: number
   done: boolean
   remark: string
+  images?: string[]   // base64 data URLs
 }
 
 export interface Inspection {

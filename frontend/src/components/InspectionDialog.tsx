@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { clsx } from 'clsx'
 import toast from 'react-hot-toast'
-import { CheckSquare, Square, X } from 'lucide-react'
+import { CheckSquare, Square, X, ImagePlus } from 'lucide-react'
 import type { Unit } from '@/types'
 import { CHECKLIST_TEMPLATE } from '@/utils/checklist'
 import { useInspection } from '@/hooks/useInspection'
@@ -29,10 +29,12 @@ const SECTION_ICONS: Record<string, string> = {
 }
 
 export default function InspectionDialog({ unit, propertyName, onClose, onSaved }: Props) {
-  const { items, loading, saving, doneCnt, pct, toggleItem, setRemark, save } =
+  const { items, loading, saving, doneCnt, pct, toggleItem, setRemark, setItemImages, save } =
     useInspection(unit?.id ?? null, unit?.propertyId ?? null)
 
   const [editingRemarkIdx, setEditingRemarkIdx] = useState<number | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploadTargetIdx, setUploadTargetIdx] = useState<number | null>(null)
 
   // Close on Escape
   useEffect(() => {
@@ -48,6 +50,35 @@ export default function InspectionDialog({ unit, propertyName, onClose, onSaved 
     toast.success(`Saved — ${doneCnt}/${items.length} items complete`)
     onSaved()
     onClose()
+  }
+
+  // Handle image file selection → convert to base64
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? [])
+    if (!files.length || uploadTargetIdx === null) return
+    const currentImages = items[uploadTargetIdx]?.images ?? []
+    let loaded = 0
+    const newImgs: string[] = []
+    files.forEach((file) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        newImgs.push(reader.result as string)
+        loaded++
+        if (loaded === files.length) {
+          setItemImages(uploadTargetIdx, [...currentImages, ...newImgs])
+          setUploadTargetIdx(null)
+        }
+      }
+      reader.readAsDataURL(file)
+    })
+    // Reset input so same file can be re-selected
+    e.target.value = ''
+  }
+
+  const removeImage = (itemIdx: number, imgIdx: number) => {
+    const imgs = [...(items[itemIdx]?.images ?? [])]
+    imgs.splice(imgIdx, 1)
+    setItemImages(itemIdx, imgs)
   }
 
   const totalItems = items.length
@@ -105,7 +136,7 @@ export default function InspectionDialog({ unit, propertyName, onClose, onSaved 
               <div className="grid gap-3 px-2 mb-1" style={{ gridTemplateColumns: '1fr 56px 1fr' }}>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Work item</span>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 text-center">Done</span>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Remarks</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Remarks &amp; Photos</span>
               </div>
 
               {/* Sections */}
@@ -159,26 +190,67 @@ export default function InspectionDialog({ unit, propertyName, onClose, onSaved 
                             </button>
                           </div>
 
-                          {/* Remark */}
+                          {/* Remark + Images */}
                           <div>
-                            {editingRemarkIdx === i || item.remark ? (
-                              <textarea
-                                value={item.remark}
-                                onChange={(e) => setRemark(i, e.target.value)}
-                                onBlur={() => { if (!item.remark) setEditingRemarkIdx(null) }}
-                                placeholder="Add remark..."
-                                rows={2}
-                                className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 bg-white text-slate-800 placeholder:text-slate-300 resize-none"
-                                autoFocus={editingRemarkIdx === i}
-                              />
-                            ) : (
+                            {/* Remark textarea / Add remark button */}
+                            <div className="flex items-start gap-1.5">
+                              <div className="flex-1">
+                                {editingRemarkIdx === i || item.remark ? (
+                                  <textarea
+                                    value={item.remark}
+                                    onChange={(e) => setRemark(i, e.target.value)}
+                                    onBlur={() => { if (!item.remark) setEditingRemarkIdx(null) }}
+                                    placeholder="Add remark..."
+                                    rows={2}
+                                    className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 bg-white text-slate-800 placeholder:text-slate-300 resize-none"
+                                    autoFocus={editingRemarkIdx === i}
+                                  />
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingRemarkIdx(i)}
+                                    className="text-xs text-[#1E3A8A] underline hover:text-[#2563EB] transition-colors"
+                                  >
+                                    Add Remark
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Add image button */}
                               <button
                                 type="button"
-                                onClick={() => setEditingRemarkIdx(i)}
-                                className="text-xs text-[#1E3A8A] underline hover:text-[#2563EB] transition-colors"
+                                title="Attach photo"
+                                onClick={() => {
+                                  setUploadTargetIdx(i)
+                                  fileInputRef.current?.click()
+                                }}
+                                className="flex-shrink-0 mt-0.5 w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 hover:border-[#2563EB] hover:bg-[#EFF6FF] text-slate-400 hover:text-[#2563EB] transition-all"
                               >
-                                Add Remark
+                                <ImagePlus size={14} />
                               </button>
+                            </div>
+
+                            {/* Image thumbnails */}
+                            {item.images && item.images.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                {item.images.map((src, imgIdx) => (
+                                  <div key={imgIdx} className="relative group">
+                                    <img
+                                      src={src}
+                                      alt={`photo-${imgIdx + 1}`}
+                                      className="w-14 h-14 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity"
+                                      onClick={() => window.open(src, '_blank')}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => removeImage(i, imgIdx)}
+                                      className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                    >
+                                      <X size={8} />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
                             )}
                           </div>
                         </div>
@@ -190,6 +262,16 @@ export default function InspectionDialog({ unit, propertyName, onClose, onSaved 
             </>
           )}
         </div>
+
+        {/* Hidden file input for image capture */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={handleFileChange}
+        />
 
         {/* Footer */}
         <div className="sticky bottom-0 bg-white border-t border-slate-100 rounded-b-2xl px-6 py-4 flex justify-between items-center gap-3">

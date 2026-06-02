@@ -44,6 +44,12 @@ export function useInspection(unitId: string | null, propertyId: string | null) 
     )
   }, [])
 
+  const setItemImages = useCallback((index: number, images: string[]) => {
+    setItems((prev) =>
+      prev.map((it) => (it.index === index ? { ...it, images } : it))
+    )
+  }, [])
+
   const save = useCallback(async () => {
     if (!unitId || !propertyId) return
     setSaving(true)
@@ -66,5 +72,5 @@ export function useInspection(unitId: string | null, propertyId: string | null) 
   const doneCnt = items.filter((it) => it.done).length
   const pct = Math.round((doneCnt / TOTAL_ITEMS) * 100)
 
-  return { inspection, items, loading, saving, doneCnt, pct, toggleItem, setRemark, save }
+  return { inspection, items, loading, saving, doneCnt, pct, toggleItem, setRemark, setItemImages, save }
 }
