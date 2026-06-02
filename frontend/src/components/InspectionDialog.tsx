@@ -29,7 +29,7 @@ const SECTION_ICONS: Record<string, string> = {
 }
 
 export default function InspectionDialog({ unit, propertyName, onClose, onSaved }: Props) {
-  const { items, loading, saving, doneCnt, pct, toggleItem, setRemark, setItemImages, save } =
+  const { items, loading, saving, doneCnt, pct, toggleItem, setRemark, setItemImages, save, hasUnsavedChanges } =
     useInspection(unit?.id ?? null, unit?.propertyId ?? null)
 
   const [editingRemarkIdx, setEditingRemarkIdx] = useState<number | null>(null)
@@ -45,10 +45,10 @@ export default function InspectionDialog({ unit, propertyName, onClose, onSaved 
 
   if (!unit) return null
 
-  const handleSave = async () => {
-    await save()
-    toast.success(`Saved — ${doneCnt}/${items.length} items complete`)
-    onSaved()
+  const handleClose = async () => {
+    if (hasUnsavedChanges.current) {
+      await save()
+    }
     onClose()
   }
 
@@ -281,18 +281,12 @@ export default function InspectionDialog({ unit, propertyName, onClose, onSaved 
               : `${pendingCnt} item${pendingCnt > 1 ? 's' : ''} remaining`}
           </p>
           <div className="flex gap-2">
-            <button
-              onClick={onClose}
-              className="border border-slate-300 text-slate-600 hover:bg-slate-50 font-semibold rounded-lg px-4 py-2 text-sm transition-colors"
-            >
-              Cancel
-            </button>
             <Button
               loading={saving}
-              onClick={handleSave}
+              onClick={handleClose}
               className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold rounded-lg px-6 py-2 text-sm"
             >
-              Save
+              Done
             </Button>
           </div>
         </div>

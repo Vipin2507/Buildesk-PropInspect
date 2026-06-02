@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Inspection, CheckItem } from '@/types'
 import { buildEmptyItems, TOTAL_ITEMS } from '@/utils/checklist'
 import { getInspection, saveInspection } from '@/utils/db'
@@ -32,19 +32,24 @@ export function useInspection(unitId: string | null, propertyId: string | null) 
 
   useEffect(() => { load() }, [load])
 
+  const itemsModified = useRef(false)
+
   const toggleItem = useCallback((index: number) => {
+    itemsModified.current = true
     setItems((prev) =>
       prev.map((it) => (it.index === index ? { ...it, done: !it.done } : it))
     )
   }, [])
 
   const setRemark = useCallback((index: number, remark: string) => {
+    itemsModified.current = true
     setItems((prev) =>
       prev.map((it) => (it.index === index ? { ...it, remark } : it))
     )
   }, [])
 
   const setItemImages = useCallback((index: number, images: string[]) => {
+    itemsModified.current = true
     setItems((prev) =>
       prev.map((it) => (it.index === index ? { ...it, images } : it))
     )
@@ -66,11 +71,23 @@ export function useInspection(unitId: string | null, propertyId: string | null) 
     await queueChange({ type: 'upsert_inspection', payload: ins })
     setInspection(ins)
     setSaving(false)
+    itemsModified.current = false // Reset after manual/auto save
     return ins
   }, [unitId, propertyId, items, user, queueChange])
+
+  // Auto-save debounced by 1 second
+  useEffect(() => {
+    if (!itemsModified.current) return
+
+    const timer = setTimeout(() => {
+      save()
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [items, save])
 
   const doneCnt = items.filter((it) => it.done).length
   const pct = Math.round((doneCnt / TOTAL_ITEMS) * 100)
 
-  return { inspection, items, loading, saving, doneCnt, pct, toggleItem, setRemark, setItemImages, save }
+  return { inspection, items, loading, saving, doneCnt, pct, toggleItem, setRemark, setItemImages, save, hasUnsavedChanges: itemsModified }
 }

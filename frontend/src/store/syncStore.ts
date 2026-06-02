@@ -88,6 +88,11 @@ export const useSyncStore = create<SyncStore>((set, get) => ({
     const full: PendingChange = { ...change, id, timestamp: Date.now(), retries: 0 }
     await addPending(full)
     await get().refreshPendingCount()
+    
+    // Auto-trigger sync if online so user doesn't have to manually click sync
+    if (get().isOnline) {
+      get().sync()
+    }
   },
 
   sync: async () => {
