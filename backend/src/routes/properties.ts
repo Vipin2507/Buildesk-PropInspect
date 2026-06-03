@@ -37,8 +37,10 @@ router.post('/', authMiddleware, (req: AuthRequest, res: Response) => {
     `).run(id, data.name, data.location, data.floors, data.unitsPerFloor, data.unitPrefix, data.startNumber, req.userId, now, now)
 
     // Generate units
-    let num = data.startNumber
+    const startOffset = data.startNumber % 100
+    const floorOffset = Math.max(0, Math.floor(data.startNumber / 100) - 1)
     for (let f = 1; f <= data.floors; f++) {
+      let num = (f + floorOffset) * 100 + startOffset
       for (let u = 1; u <= data.unitsPerFloor; u++) {
         const unitNumber = data.unitPrefix ? `${data.unitPrefix}${num}` : String(num)
         const unitId = uuid()

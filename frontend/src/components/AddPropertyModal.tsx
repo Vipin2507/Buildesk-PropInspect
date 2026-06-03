@@ -56,9 +56,13 @@ export default function AddPropertyModal({ open, onClose, onCreate }: Props) {
   }
 
   const totalUnits = (Number(form.floors) || 0) * (Number(form.unitsPerFloor) || 0)
+  const startNumVal = Number(form.startNumber) || 101
+  const startOffset = startNumVal % 100
+  const floorOffset = Math.max(0, Math.floor(startNumVal / 100) - 1)
+  const firstUnitNum = (1 + floorOffset) * 100 + startOffset
   const preview = form.unitPrefix
-    ? `${form.unitPrefix}${form.startNumber || 101}`
-    : String(form.startNumber || 101)
+    ? `${form.unitPrefix}${firstUnitNum}`
+    : String(firstUnitNum)
 
   return (
     <Modal

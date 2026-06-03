@@ -92,8 +92,10 @@ export function useProperties() {
 
       // Generate units locally
       const units = []
-      let num = data.startNumber
+      const startOffset = data.startNumber % 100
+      const floorOffset = Math.max(0, Math.floor(data.startNumber / 100) - 1)
       for (let f = 1; f <= data.floors; f++) {
+        let num = (f + floorOffset) * 100 + startOffset
         for (let u = 1; u <= data.unitsPerFloor; u++) {
           const uNum = data.unitPrefix ? `${data.unitPrefix}${num}` : String(num)
           units.push({ id: `unit_${id}_${uNum}`, propertyId: id, unitNumber: uNum, floor: f, createdAt: now })
