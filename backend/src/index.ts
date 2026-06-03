@@ -4,6 +4,7 @@ import cors from 'cors'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 import path from 'path'
+import fs from 'fs'
 import { hash } from 'bcryptjs'
 import { getDB } from './utils/database'
 import authRoutes from './routes/auth'
@@ -31,18 +32,20 @@ app.use('/api/units', unitsRoutes)
 app.use('/api/inspections', inspectionsRoutes)
 app.use('/api/sync', syncRoutes)
 
-// Serve frontend static files in production
+// Serve frontend static files in production if built
 if (process.env.NODE_ENV === 'production') {
   const frontendBuildPath = path.join(__dirname, '../../frontend/dist')
-  app.use(express.static(frontendBuildPath))
+  if (fs.existsSync(frontendBuildPath)) {
+    app.use(express.static(frontendBuildPath))
 
-  // Fallback to index.html for client-side routing
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) {
-      return next()
-    }
-    res.sendFile(path.join(frontendBuildPath, 'index.html'))
-  })
+    // Fallback to index.html for client-side routing
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api')) {
+        return next()
+      }
+      res.sendFile(path.join(frontendBuildPath, 'index.html'))
+    })
+  }
 }
 
 // Health check
