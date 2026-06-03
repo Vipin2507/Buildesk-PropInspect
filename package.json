@@ -16,5 +16,8 @@
     "start": "node backend/dist/index.js",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev"
+  },
+  "dependencies": {
+    "tsx": "^4.22.4"
   }
 }
